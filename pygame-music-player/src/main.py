@@ -1,3 +1,5 @@
+# Corrected code lines:
+
 import pygame
 # Import our modular components
 from database import MusicDatabase
@@ -13,36 +15,29 @@ from wifi_manager import WiFiManager
 from click_wheel import ClickWheel
 from pathlib import Path
 
-# Importar configuración de Pi Zero si está disponible
-try:
-    import sys
-    import os
-    # Agregar el directorio padre al path para importar pi_zero_config
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from pi_zero_config import is_raspberry_pi_zero, apply_pi_zero_config
-    PI_ZERO_AVAILABLE = True
-except ImportError:
-    PI_ZERO_AVAILABLE = False
-    print("ℹ️  Configuración de Pi Zero no disponible")
 
 class iPodClassicUI:
     """Main iPod Classic UI application using modular components"""
     
+    # Dimensiones calculadas para simular 2.8" pantalla y 3.5" total diagonal
+    SCREEN_WIDTH = 358
+    SCREEN_HEIGHT = 269 # Altura de la pantalla del iPod
+    WINDOW_HEIGHT = 431 # Altura total de la ventana para simular 3.5" diagonal con 358px ancho
+    CLICK_WHEEL_HEIGHT = WINDOW_HEIGHT - SCREEN_HEIGHT # Altura restante para la Click Wheel
+    
     def __init__(self):
-        # Aplicar configuración de Pi Zero si está disponible
-        if PI_ZERO_AVAILABLE and is_raspberry_pi_zero():
-            print("🥧 Raspberry Pi Zero detectado - Aplicando optimizaciones...")
-            pi_config = apply_pi_zero_config()
-            # Aplicar configuración optimizada a UIConfig
-            os.environ['PI_ZERO_MODE'] = '1'
-        
         pygame.init()
           # Initialize UI configuration
         self.ui_config = UIConfig()
         
-        # Set up display
-        self.screen = pygame.display.set_mode((self.ui_config.SCREEN_WIDTH, self.ui_config.SCREEN_HEIGHT))
+        # Set up display with new size
+        self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.WINDOW_HEIGHT))
         pygame.display.set_caption("iPod Classic")
+        
+        # Superficie para la pantalla principal (usa la altura de pantalla, no la total)
+        self.display_surface = pygame.Surface((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
+        # Superficie para la click wheel (usa la altura calculada para la rueda)
+        self.click_wheel_surface = pygame.Surface((self.SCREEN_WIDTH, self.CLICK_WHEEL_HEIGHT), pygame.SRCALPHA)
         
         # Initialize core components
         self.db = MusicDatabase(db_path="./ipod_music_library.db")
@@ -149,13 +144,27 @@ class iPodClassicUI:
                 self.music_controller.get_shuffle_mode(),
                 self.playback.get_volume()
             )
+            should_push_current = True
         elif self.current_menu == "cover_flow":
             self.cover_flow.load_cover_flow_data()
         elif self.current_menu == "wifi_menu":
+            next_menu = "wifi_menu"
             current_network = self.wifi_manager.get_current_connection()
             self.menu_manager.load_wifi_menu(current_network)
+            should_push_current = True
+        elif self.current_menu == "scan_networks":
+            self.wifi_scan_in_progress = True
+            self.menu_manager.load_wifi_networks([], True)  # Show scanning message
+            # Start scanning in a non-blocking way
+            self.wifi_networks = self.wifi_manager.scan_networks()
+            self.wifi_scan_in_progress = False
+            self.menu_manager.load_wifi_networks(self.wifi_networks, False)
+            next_menu = "wifi_networks"
+            should_push_current = True
         elif self.current_menu == "wifi_networks":
+            next_menu = "wifi_networks"
             self.menu_manager.load_wifi_networks(self.wifi_networks, self.wifi_scan_in_progress)
+            should_push_current = True
         elif self.current_menu == "wifi_password":
             if self.wifi_selected_network:
                 self.menu_manager.load_wifi_password_input(self.wifi_selected_network.ssid)
@@ -171,20 +180,20 @@ class iPodClassicUI:
         # Get mouse state for Click Wheel
         mouse_pos = pygame.mouse.get_pos()
         mouse_pressed = pygame.mouse.get_pressed()
+        # Ajustar mouse_pos para la Click Wheel (restar altura de pantalla)
+        mouse_pos_cw = (mouse_pos[0], mouse_pos[1] - self.SCREEN_HEIGHT)
         
-        # Handle Click Wheel input (mouse and keyboard)
-        wheel_actions = []
+        wheel_actions = [] # Inicializamos la lista de acciones aquí
         
+        # Handle Click Wheel mouse input (This section is likely incorrect now)
+        # if self.click_wheel_enabled:
+        #     # This call is likely the source of the error, still passing 'events'
+        #     wheel_actions.extend(self.click_wheel.handle_mouse_input(mouse_pos_cw, events)) # <-- This line needs fixing
+
         # Process all events
         events = pygame.event.get()
-          # Handle Click Wheel mouse input
-        if self.click_wheel_enabled:
-            # Process each event for mouse input
-            for event in events:
-                if event.type in [pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION]:
-                    wheel_actions.extend(self.click_wheel.handle_mouse_input(mouse_pos, event))
         
-        for event in events:
+        for event in events: # <-- This is where single events are processed
             if event.type == pygame.QUIT:
                 self.running = False
                 return
@@ -194,10 +203,11 @@ class iPodClassicUI:
                 self.music_controller.handle_song_end()
                 continue
             
-            # Handle Click Wheel keyboard input
+            # Handle Click Wheel keyboard input (already inside loop)
             if self.click_wheel_enabled and event.type == pygame.KEYDOWN:
                 wheel_actions.extend(self.click_wheel.handle_keyboard_input(event))
             
+            # Handle volume control
             if event.type == pygame.KEYDOWN:
                 # Handle volume control
                 if self.volume_control_active:
@@ -265,7 +275,11 @@ class iPodClassicUI:
                             self.playback.pause()
                         elif self.current_song_data:
                             self.playback.play()
-        
+            # Handle Click Wheel mouse input for the current event (MOVE THIS INSIDE LOOP)
+            if self.click_wheel_enabled and event.type in [pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION]:
+                 # mouse_pos_cw was calculated before the loop
+                 wheel_actions.extend(self.click_wheel.handle_mouse_input(mouse_pos_cw, event))
+
         # Process Click Wheel actions
         self._handle_click_wheel_actions(wheel_actions)
     
@@ -307,86 +321,158 @@ class iPodClassicUI:
             return
         
         # Push current menu to stack for navigation history
-        if action not in ["refresh_library", "quit", "play_all_shuffle", "toggle_repeat", "toggle_shuffle", "set_volume"]:
-            if self.current_menu not in ["now_playing"]:
-                self.menu_stack.append(self.current_menu)
-        
+        # Simplificamos la lógica: añadir a la pila antes de cambiar a un nuevo menú, excepto now_playing directo.
+        # if action not in ["refresh_library", "quit", "play_all_shuffle", "toggle_repeat", "toggle_shuffle", "set_volume"]:
+        #     if self.current_menu not in ["now_playing"]:
+        #         self.menu_stack.append(self.current_menu)
+
+        next_menu = None # Variable para saber a qué menú vamos a ir
+        should_push_current = True # Bandera para decidir si guardar el menú actual
+
         # Handle different actions
         if action in ["music", "videos", "photos", "podcasts", "extras", "settings"]:
-            self.current_menu = action
+            next_menu = action
             self._load_current_menu()
-        
+            should_push_current = True
+
+        elif action == "wifi_menu":
+            next_menu = "wifi_menu"
+            current_network = self.wifi_manager.get_current_connection()
+            self.menu_manager.load_wifi_menu(current_network)
+            should_push_current = True
+
+        elif action == "scan_networks":
+            self.wifi_scan_in_progress = True
+            self.menu_manager.load_wifi_networks([], True)  # Show scanning message
+            # Start scanning in a non-blocking way
+            self.wifi_networks = self.wifi_manager.scan_networks()
+            self.wifi_scan_in_progress = False
+            self.menu_manager.load_wifi_networks(self.wifi_networks, False)
+            next_menu = "wifi_networks"
+            should_push_current = True
+
         elif action == "view_artists":
-            self.current_menu = "artists"
-            self._load_current_menu()
+            next_menu = "artists"
         
         elif action == "view_albums":
-            self.current_menu = "albums"
-            self._load_current_menu()
+            next_menu = "albums"
         
         elif action == "view_all_songs":
-            self.current_menu = "all_songs"
-            self._load_current_menu()
+            next_menu = "all_songs"
         
         elif action == "view_cover_flow":
-            self.current_menu = "cover_flow"
+            next_menu = "cover_flow"
             self.cover_flow.load_cover_flow_data()
         
         elif action == "view_songs_by_artist":
-            self.current_menu = "songs_by_artist"
+            next_menu = "songs_by_artist"
             self.menu_manager.load_songs_by_artist(data)
             self.selected_index = 0
             self.scroll_offset = 0
         
         elif action == "view_songs_by_album":
-            self.current_menu = "songs_by_album"
+            next_menu = "songs_by_album"
             self.menu_manager.load_songs_by_album(data)
             self.selected_index = 0
             self.scroll_offset = 0
         
         elif action == "play_video":
             if self.video_player.play_video(data):
-                self.current_menu = "video_playing"
+                 next_menu = "video_playing"
         
         elif action == "play_song":
-            # Play selected song: pass song data and the full items list for playlist context
-            if self.music_controller.play_song_from_list(data, items):
-                self.current_song_data = data
-                self.current_menu = "now_playing"
+            try:
+                if isinstance(items, list) and all(isinstance(item, dict) for item in items):
+                    if self.music_controller.play_song_from_list(data, items):
+                        self.current_song_data = data
+                        next_menu = "now_playing" # Vamos a la pantalla de reproducción
+                        # Al reproducir una canción desde una lista, SÍ queremos poder volver a la lista.
+                        # El menú actual (la lista de canciones) SÍ debe ir a la pila.
+                        should_push_current = True # Aseguramos que se guarde el menú actual (la lista)
+                    else:
+                        print("Error: No se pudo reproducir la canción")
+                        should_push_current = False # No cambiamos de menú si falla, no guardar nada
+                else:
+                    print("Error: Invalid song list format")
+                    should_push_current = False # No cambiamos de menú si falla, no guardar nada
+            except Exception as e:
+                print(f"Error playing song: {e}")
+                # Try to recover by loading the songs list again
+                if self.current_menu == "songs_by_album":
+                    self.menu_manager.load_songs_by_album(data)
+                elif self.current_menu == "songs_by_artist":
+                    self.menu_manager.load_songs_by_artist(data)
+                should_push_current = False # No cambiamos de menú si falla, no guardar nada
+
         
         elif action == "play_all_shuffle":
             if self.music_controller.play_all_shuffle():
                 self.current_song_data = self.music_controller.get_current_song_info()
-                self.current_menu = "now_playing"
+                next_menu = "now_playing"
+                # Al iniciar shuffle all, el menú anterior (probablemente Main o Music) debe ir a la pila.
+                should_push_current = True
+
         
         elif action == "now_playing":
+            # Si seleccionas "Now Playing" desde un menú y no hay canción reproduciendo,
+            # intenta reproducir la primera. Si hay canción, simplemente vas a la pantalla de reproducción.
             if not self.current_song_data:
                 if self.music_controller.play_first_available_song():
                     self.current_song_data = self.music_controller.get_current_song_info()
-            self.current_menu = "now_playing"
+                    next_menu = "now_playing"
+                    should_push_current = True # Guardar el menú anterior
+                else:
+                    # No hay canciones para reproducir, quedarse en el menú actual.
+                    should_push_current = False
+                    print("No hay canciones para reproducir.")
+            else:
+                 # Ya hay una canción reproduciendo, simplemente ir a la pantalla de Now Playing
+                 next_menu = "now_playing"
+                 should_push_current = True # Guardar el menú anterior (de donde vienes)
 
         
         elif action == "toggle_repeat":
             self.music_controller.toggle_repeat()
             self._load_current_menu()
+            should_push_current = False # No cambiamos de menú
         
         elif action == "toggle_shuffle":
             self.music_controller.toggle_shuffle()
             self._load_current_menu()
+            should_push_current = False # No cambiamos de menú
         
         elif action == "set_volume":
             self.volume_control_active = True
+            self._load_current_menu() # Recargar menú para mostrar control de volumen (si aplica)
+            should_push_current = False # No cambiamos de menú
         
         elif action == "refresh_library":
             self.refresh_music_library(show_message=True)
+            should_push_current = False # No cambiamos de menú, solo recargamos
         
         elif action in ["go_back_to_main", "go_back_to_music"]:
-            if action == "go_back_to_main":
-                self.menu_stack.clear()
-                self.current_menu = "main"
-            else:
-                self.current_menu = "music"
-            self._load_current_menu()
+             # Estas acciones fuerzan una navegación específica, no usamos la pila para ellas.
+             if action == "go_back_to_main":
+                 self.menu_stack.clear()
+                 next_menu = "main"
+             else:
+                 next_menu = "music"
+             should_push_current = False # No guardar el menú actual, ya vamos a uno específico
+
+        # --- Lógica común de navegación ---
+        # Si decidimos ir a un nuevo menú y debemos guardar el actual:
+        if next_menu and should_push_current and self.current_menu != next_menu:
+            # Solo guardamos si el menú actual no es now_playing Y el próximo menú NO es now_playing
+            # O si venimos de una lista a now_playing
+             is_coming_from_list = self.current_menu in ["all_songs", "songs_by_artist", "songs_by_album"]
+             if (self.current_menu != "now_playing" and next_menu != "now_playing") or (is_coming_from_list and next_menu == "now_playing"):
+                print(f"Pushing {self.current_menu} to stack.")
+                self.menu_stack.append(self.current_menu)
+
+        # Cambiar al nuevo menú y cargarlo
+        if next_menu:
+             self.current_menu = next_menu
+             self._load_current_menu()
     
     def go_back(self):
         """Navigate back to previous menu"""
@@ -417,54 +503,51 @@ class iPodClassicUI:
         while self.running:
             # Handle input
             self.handle_input()
-              # Update animations
+            # Update animations
             dt = self.clock.get_time() / 1000.0
             if self.current_menu == "cover_flow":
                 self.cover_flow.update_cover_flow_animation(dt)
-            
             # Update Click Wheel
             if self.click_wheel_enabled:
                 self.click_wheel.update()
-            
             # Update current song data
             if self.music_controller.get_current_song_info():
                 self.current_song_data = self.music_controller.get_current_song_info()
-                    
-            # Render the current screen
+            # --- RENDER PANTALLA ---
+            self.display_surface.fill(self.ui_config.BG_COLOR)
+            self.renderer.screen = self.display_surface  # Renderizador usa la superficie de pantalla
             self.renderer.draw_background()
             self.renderer.draw_header(self.current_menu, self.playback.is_playing and not self.playback.is_paused)
             if self.current_menu == "now_playing":
-                #draw_now_playing(self, song_data, current_position, is_playing, is_paused,  playlist_info=None):
                 self.renderer.draw_now_playing(self.current_song_data,
-                                                  self.playback.get_current_position_s(),
-                                                  self.playback.is_playing,
-                                                  self.playback.is_paused,
-                                                  self.music_controller.get_playlist_info())
+                                              self.playback.get_current_position_s(),
+                                              self.playback.is_playing,
+                                              self.playback.is_paused,
+                                              self.music_controller.get_playlist_info())
             elif self.current_menu == "video_playing":
-                self.video_player.draw_video_playing(self.screen,self.renderer)
+                self.video_player.draw_video_playing(self.display_surface, self.renderer)
             elif self.current_menu == "settings":
                 items = self.menu_manager.get_current_items()
                 self.renderer.draw_settings_menu(items, self.selected_index, self.scroll_offset)
             elif self.current_menu == "cover_flow":
-                self.cover_flow.draw_cover_flow(self.screen)
+                self.cover_flow.draw_cover_flow(self.display_surface)
             else:
-                # Draw regular menu
                 items = self.menu_manager.get_current_items()
                 menu_type = self.menu_manager.get_current_list_type()
                 self.renderer.draw_menu(items, self.selected_index, self.scroll_offset, menu_type)
-              # Draw mini player if not in now playing screen
             if self.current_menu != "now_playing" and self.current_song_data:
-                #draw_mini_player(self, song_data, current_position, duration, is_playing, is_paused):
                 self.renderer.draw_mini_player(self.current_song_data,
-                                                self.playback.get_current_position_s(),
-                                                self.current_song_data[5],
-                                                self.playback.is_playing,
-                                                self.playback.is_paused)
-            
-            # Draw Click Wheel
+                                              self.playback.get_current_position_s(),
+                                              self.current_song_data[5],
+                                              self.playback.is_playing,
+                                              self.playback.is_paused)
+            # --- RENDER CLICK WHEEL ---
+            self.click_wheel_surface.fill((0,0,0,0))  # Limpiar con transparencia
             if self.click_wheel_enabled:
-                self.click_wheel.draw(self.screen)
-            
+                self.click_wheel.draw(self.click_wheel_surface)
+            # --- BLITTEAR AMBAS PARTES EN LA VENTANA PRINCIPAL ---
+            self.screen.blit(self.display_surface, (0, 0))
+            self.screen.blit(self.click_wheel_surface, (0, self.SCREEN_HEIGHT))
             pygame.display.flip()
             self.clock.tick(30)  # 30 FPS
         
@@ -505,7 +588,7 @@ class iPodClassicUI:
             if self.playback.is_playing and not self.playback.is_paused:
                 self.playback.pause()
             elif self.playback.is_paused:
-                self.playback.unpause()
+                self.playback.play()
             elif self.current_song_data:
                 self.playback.play()
             else:
@@ -540,3 +623,13 @@ class iPodClassicUI:
                 self.volume_control_active = True
                 self.playback.set_volume(max(0.0, self.playback.get_volume() - 0.05))
                 self._load_current_menu()
+    
+
+if __name__ == '__main__':
+    # Create a music folder if it doesn't exist for easy testing
+    Path("music").mkdir(exist_ok=True)
+    print("PyPod Classic: Buscando música en la carpeta './music/' y en '~/Music'.")
+    print("Coloque archivos de música (mp3, wav, ogg, flac, m4a) en esas carpetas.")
+    
+    app = iPodClassicUI()
+    app.run()
