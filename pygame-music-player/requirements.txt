@@ -1,0 +1,20 @@
+# Core dependencies for iPod Classic Music Player
+
+mutagen>=1.45.0
+
+# Video playback support (optional)
+ffpyplayer>=4.3.0
+
+# For better audio format support
+pygame-ce>=2.1.0  # Alternative to pygame with better features (optional)
+
+# Standard library dependencies (included with Python)
+# sqlite3 - Database operations
+# pathlib - File path operations  
+# time - Time utilities
+# random - Shuffle functionality
+# subprocess - WiFi management
+# platform - Cross-platform compatibility
+# re - Regular expressions
+# typing - Type hints
+# os - Operating system interface

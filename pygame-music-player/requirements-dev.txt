@@ -1,0 +1,26 @@
+# Development requirements for iPod Classic Music Player
+# These are the exact versions tested and known to work
+
+# Core dependencies
+pygame==2.5.2
+mutagen==1.47.0
+
+# Video playback support
+ffpyplayer==4.3.5
+
+# Optional: Enhanced pygame version with better features
+pygame-ce==2.4.1
+
+# Development tools (optional)
+# pylint==3.0.3
+# black==23.12.1
+# pytest==7.4.3
+
+# Notes:
+# - All standard library modules are included with Python 3.8+
+# - sqlite3, pathlib, time, random, subprocess, platform, re, typing, os
+# - For Windows: No additional system dependencies required
+# - For Linux: May need to install pygame dependencies:
+#   sudo apt-get install python3-pygame python3-dev libsdl2-dev
+# - For macOS: Install via Homebrew if needed:
+#   brew install sdl2 sdl2_image sdl2_mixer sdl2_ttf
