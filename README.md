@@ -1,234 +1,234 @@
 # iPod Classic Music Player
 
-Un reproductor de música en Python que emula la interfaz clásica del iPod usando Pygame, diseñado especialmente para Raspberry Pi Zero pero compatible con cualquier sistema.
+A Python music player that emulates the classic iPod interface using Pygame, specially designed for Raspberry Pi Zero but compatible with any system.
 
-## 🎵 Características
+## 🎵 Features
 
-### Interfaz iPod Classic Auténtica
-- **UI iPod Classic 6ta Generación**: Interfaz fiel al diseño original con colores y fuentes auténticas
-- **Click Wheel Funcional**: Rueda táctil simulada con botones Menu, Play/Pause, Forward, Backward y botón central
-- **Pantalla 2.8"**: Resolución 358x269 simulando la pantalla original del iPod
-- **Animaciones Suaves**: Transiciones y animaciones como el iPod real
+### Authentic iPod Classic Interface
+- **iPod Classic 6th Gen UI**: Faithful interface design with authentic colors and fonts
+- **Functional Click Wheel**: Simulated touch wheel with Menu, Play/Pause, Forward, Backward, and center buttons
+- **2.8" Display**: 358x269 resolution simulating the original iPod screen
+- **Smooth Animations**: Transitions and animations just like the real iPod
 
-### Funcionalidades de Música
-- **Biblioteca Musical**: Escaneo automático de archivos MP3, WAV, OGG, FLAC, M4A, AAC
-- **Navegación por Artista/Álbum/Canciones**: Organización completa de la música
-- **Cover Flow**: Vista de álbumes con navegación visual (como iPod Classic real)
-- **Controles de Reproducción**: Play, pausa, siguiente, anterior, shuffle, repetir
-- **Control de Volumen**: Ajuste de volumen integrado
-- **Now Playing**: Pantalla de reproducción actual con barra de progreso
+### Music Features
+- **Music Library**: Automatic scanning of MP3, WAV, OGG, FLAC, M4A, AAC files
+- **Browse by Artist/Album/Songs**: Complete music organization
+- **Cover Flow**: Album view with visual navigation (like real iPod Classic)
+- **Playback Controls**: Play, pause, next, previous, shuffle, repeat
+- **Volume Control**: Integrated volume adjustment
+- **Now Playing**: Current playback screen with progress bar
 
-### Funcionalidades Multimedia
-- **Reproductor de Video**: Soporte para archivos de video locales
+### Multimedia Features
+- **Video Player**: Support for local video files
 - **YouTube Player**: 
-  - Búsqueda de videos con teclado virtual iPod
-  - Videos trending de música
-  - Reproducción de videos de YouTube
-- **Listas de Reproducción**: Soporte básico para listas
+  - Video search with iPod virtual keyboard
+  - Trending music videos
+  - YouTube video playback
+- **Playlists**: Basic playlist support
 
-### Conectividad
-- **WiFi Manager**: Conexión y gestión de redes WiFi
-- **Base de Datos SQLite**: Almacenamiento eficiente de metadatos musicales
+### Connectivity
+- **WiFi Manager**: WiFi network connection and management
+- **SQLite Database**: Efficient music metadata storage
 
-### Optimizado para Raspberry Pi
-- **Arranque Automático**: Se ejecuta automáticamente al encender
-- **Modo Consola**: Funciona sin entorno de escritorio
-- **Bajo Consumo**: Optimizado para Raspberry Pi Zero
-- **Framebuffer**: Salida directa a pantalla sin X11
+### Optimized for Raspberry Pi
+- **Auto Boot**: Runs automatically on startup
+- **Console Mode**: Works without desktop environment
+- **Low Power**: Optimized for Raspberry Pi Zero
+- **Framebuffer**: Direct screen output without X11
 
-## 📦 Instalación
+## 📦 Installation
 
-### Instalación Rápida en Raspberry Pi
+### Quick Install on Raspberry Pi
 
 ```bash
-# Clona el repositorio
-git clone https://github.com/tu-usuario/pygame-music-player.git
+# Clone the repository
+git clone https://github.com/your-username/pygame-music-player.git
 cd pygame-music-player
 
-# Ejecuta el instalador automático
+# Run the automatic installer
 chmod +x quick_install_pi.sh
 ./quick_install_pi.sh
 
-# Reinicia para aplicar cambios
+# Reboot to apply changes
 sudo reboot
 ```
 
-### Instalación Completa en Raspberry Pi
+### Complete Installation on Raspberry Pi
 
 ```bash
-# Para instalación completa con todas las optimizaciones
+# For complete installation with all optimizations
 chmod +x install_pi.sh
 ./install_pi.sh
 sudo reboot
 ```
 
-### Instalación Manual
+### Manual Installation
 
-1. **Clonar el repositorio:**
+1. **Clone the repository:**
    ```bash
-   git clone https://github.com/tu-usuario/pygame-music-player.git
+   git clone https://github.com/your-username/pygame-music-player.git
    cd pygame-music-player
    ```
 
-2. **Crear entorno virtual:**
+2. **Create virtual environment:**
    ```bash
    python3 -m venv venv
-   source venv/bin/activate  # En Windows: venv\Scripts\activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Instalar dependencias:**
+3. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Agregar música:**
-   - Crea una carpeta `music` en el directorio del proyecto
-   - O coloca música en `~/Music`
-   - Formatos soportados: MP3, WAV, OGG, FLAC, M4A, AAC
+4. **Add music:**
+   - Create a `music` folder in the project directory
+   - Or place music in `~/Music`
+   - Supported formats: MP3, WAV, OGG, FLAC, M4A, AAC
 
-5. **Ejecutar:**
+5. **Run:**
    ```bash
    python src/main.py
    ```
 
-## 🎮 Controles
+## 🎮 Controls
 
-### Teclado (Desarrollo/PC)
-- **Flechas ↑↓ o W/S**: Navegar menús
-- **Enter/Espacio**: Seleccionar elemento
-- **Escape/Backspace**: Volver/Menú anterior
-- **En Now Playing:**
-  - A/← : Canción anterior
-  - D/→ : Canción siguiente  
-  - P: Play/Pausa
-  - V: Control de volumen
+### Keyboard (Development/PC)
+- **Arrow Keys ↑↓ or W/S**: Navigate menus
+- **Enter/Space**: Select item
+- **Escape/Backspace**: Go back/Previous menu
+- **In Now Playing:**
+  - A/← : Previous song
+  - D/→ : Next song  
+  - P: Play/Pause
+  - V: Volume control
 
-### Click Wheel (Mouse/Táctil)
-- **Rueda externa**: Deslizar para navegar
-- **Botón central**: Seleccionar
-- **Botón superior (Menu)**: Volver
-- **Botón inferior (Play)**: Play/Pausa
-- **Botones laterales**: Anterior/Siguiente
+### Click Wheel (Mouse/Touch)
+- **Outer wheel**: Slide to navigate
+- **Center button**: Select
+- **Top button (Menu)**: Go back
+- **Bottom button (Play)**: Play/Pause
+- **Side buttons**: Previous/Next
 
-## 📁 Estructura del Proyecto
+## 📁 Project Structure
 
 ```
 pygame-music-player/
 ├── src/
-│   ├── main.py              # Aplicación principal
-│   ├── database.py          # Gestión de base de datos SQLite
-│   ├── playback.py          # Control de reproducción
-│   ├── renderer.py          # Motor de renderizado iPod
-│   ├── ui_config.py         # Configuración visual iPod Classic
-│   ├── menu_manager.py      # Gestión de menús y navegación
-│   ├── music_controller.py  # Controlador de música
-│   ├── click_wheel.py       # Implementación Click Wheel
-│   ├── cover_flow.py        # Vista Cover Flow
-│   ├── video_player.py      # Reproductor de video
-│   ├── youtube_manager.py   # Gestión de YouTube
-│   ├── youtube_player.py    # Reproductor YouTube
-│   ├── wifi_manager.py      # Gestión WiFi
-│   └── input_handler.py     # Manejo de entrada
-├── music/                   # Directorio de música local
-├── videos/                  # Directorio de videos locales
-├── assets/                  # Recursos (fuentes, imágenes)
-├── install_pi.sh           # Instalador completo para Pi
-├── quick_install_pi.sh     # Instalador rápido para Pi
-├── requirements.txt        # Dependencias Python
-└── README.md              # Este archivo
+│   ├── main.py              # Main application
+│   ├── database.py          # SQLite database management
+│   ├── playback.py          # Playback control
+│   ├── renderer.py          # iPod rendering engine
+│   ├── ui_config.py         # iPod Classic visual configuration
+│   ├── menu_manager.py      # Menu and navigation management
+│   ├── music_controller.py  # Music controller
+│   ├── click_wheel.py       # Click Wheel implementation
+│   ├── cover_flow.py        # Cover Flow view
+│   ├── video_player.py      # Video player
+│   ├── youtube_manager.py   # YouTube management
+│   ├── youtube_player.py    # YouTube player
+│   ├── wifi_manager.py      # WiFi management
+│   └── input_handler.py     # Input handling
+├── music/                   # Local music directory
+├── videos/                  # Local videos directory
+├── assets/                  # Resources (fonts, images)
+├── install_pi.sh           # Complete installer for Pi
+├── quick_install_pi.sh     # Quick installer for Pi
+├── requirements.txt        # Python dependencies
+└── README.md              # This file
 ```
 
-## 🛠️ Dependencias
+## 🛠️ Dependencies
 
 ### Python
-- `pygame-ce>=2.1.0` - Motor gráfico mejorado
-- `mutagen>=1.45.0` - Metadatos de audio
-- `ffpyplayer>=4.3.0` - Reproducción de video
-- `yt-dlp>=2023.11.16` - Soporte YouTube
-- `requests>=2.31.0` - Peticiones HTTP
+- `pygame-ce>=2.1.0` - Enhanced graphics engine
+- `mutagen>=1.45.0` - Audio metadata
+- `ffpyplayer>=4.3.0` - Video playback
+- `yt-dlp>=2023.11.16` - YouTube support
+- `requests>=2.31.0` - HTTP requests
 
-### Sistema (Raspberry Pi)
-- `python3-pygame` - Pygame del sistema
-- `alsa-utils` - Audio ALSA
-- `libsdl2-dev` - Desarrollo SDL2
-- `python3-dev` - Headers de Python
+### System (Raspberry Pi)
+- `python3-pygame` - System Pygame
+- `alsa-utils` - ALSA audio
+- `libsdl2-dev` - SDL2 development
+- `python3-dev` - Python headers
 
-## 🎛️ Gestión del Servicio (Raspberry Pi)
+## 🎛️ Service Management (Raspberry Pi)
 
-Una vez instalado, puedes controlar el iPod con estos comandos:
+Once installed, you can control the iPod with these commands:
 
 ```bash
-# Controlar el servicio
-ipod-control.sh start     # Iniciar
-ipod-control.sh stop      # Detener  
-ipod-control.sh restart   # Reiniciar
-ipod-control.sh status    # Estado
-ipod-control.sh logs      # Ver logs
+# Control the service
+ipod-control.sh start     # Start
+ipod-control.sh stop      # Stop  
+ipod-control.sh restart   # Restart
+ipod-control.sh status    # Status
+ipod-control.sh logs      # View logs
 
-# Comandos systemd directos
+# Direct systemd commands
 sudo systemctl status ipod-player
 sudo journalctl -u ipod-player -f
 ```
 
-## 🔧 Configuración
+## 🔧 Configuration
 
-### Directorios de Música
-El reproductor escanea automáticamente:
-- `./music/` (directorio del proyecto)
-- `~/Music/` (directorio de usuario)
+### Music Directories
+The player automatically scans:
+- `./music/` (project directory)
+- `~/Music/` (user directory)
 
-### Resolución de Pantalla
-- **Pantalla iPod**: 358x269 píxeles (2.8")
-- **Ventana total**: 358x431 píxeles (3.5" diagonal)
-- **Click Wheel**: 358x162 píxeles
+### Screen Resolution
+- **iPod Display**: 358x269 pixels (2.8")
+- **Total Window**: 358x431 pixels (3.5" diagonal)
+- **Click Wheel**: 358x162 pixels
 
-### Base de Datos
-- Archivo: `ipod_music_library.db`
-- Auto-escaneo al inicio
-- Actualización incremental de metadatos
+### Database
+- File: `ipod_music_library.db`
+- Auto-scan on startup
+- Incremental metadata updates
 
-## 🐛 Solución de Problemas
+## 🐛 Troubleshooting
 
-### Audio no funciona
+### Audio not working
 ```bash
-# Verificar dispositivos de audio
+# Check audio devices
 aplay -l
 
-# Configurar salida de audio (Pi)
+# Configure audio output (Pi)
 sudo raspi-config # Advanced Options > Audio > Force 3.5mm
 ```
 
-### Sin video en Raspberry Pi
+### No video on Raspberry Pi
 ```bash
-# Verificar framebuffer
+# Check framebuffer
 ls -la /dev/fb0
 
-# Agregar usuario al grupo video
+# Add user to video group
 sudo usermod -a -G video pi
 ```
 
-### Problemas de permisos
+### Permission issues
 ```bash
-# Corregir permisos de la aplicación
+# Fix application permissions
 sudo chown -R pi:pi /home/pi/ipod-music-player
 ```
 
-## 🤝 Contribuir
+## 🤝 Contributing
 
-1. Hacer fork del repositorio
-2. Crear rama para tu característica (`git checkout -b feature/nueva-caracteristica`)
-3. Commit de cambios (`git commit -am 'Agregar nueva característica'`)
-4. Push a la rama (`git push origin feature/nueva-caracteristica`)
-5. Crear Pull Request
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/new-feature`)
+3. Commit your changes (`git commit -am 'Add new feature'`)
+4. Push to the branch (`git push origin feature/new-feature`)
+5. Create a Pull Request
 
-## 📜 Licencia
+## 📜 License
 
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🎵 Agradecimientos
+## 🎵 Acknowledgments
 
-Inspirado en el diseño clásico del iPod de Apple y construido con amor para la comunidad de Raspberry Pi.
+Inspired by Apple's classic iPod design and built with love for the Raspberry Pi community.
 
 ---
 
-**¡Disfruta tu experiencia iPod Classic en Raspberry Pi!** 🎧
+**Enjoy your iPod Classic experience on Raspberry Pi!** 🎧
