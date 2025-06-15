@@ -13,7 +13,7 @@ class UIConfig:
         # Original iPod Classic 6th Gen had 2.5-inch, 320x240 screen
         # We'll extend height to accommodate the Click Wheel below
         # Dimensiones actualizadas para simular 2.8" pantalla y 3.5" total diagonal
-        self.SCREEN_WIDTH = 310
+        self.SCREEN_WIDTH = 350
         self.DISPLAY_HEIGHT = 269  # Actual display area height (Pantalla iPod)
         # La altura total de la ventana (SCREEN_HEIGHT) y la altura de la zona de Click Wheel
         # se calculan en main.py para lograr la diagonal de 3.5". Usaremos estos valores

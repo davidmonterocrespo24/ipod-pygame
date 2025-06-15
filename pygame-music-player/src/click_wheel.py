@@ -207,7 +207,7 @@ class ClickWheel:
         """Draw the Click Wheel on the screen"""
         # Draw background for the Click Wheel area
         wheel_bg_rect = pygame.Rect(0, 0, screen.get_width(), screen.get_height())
-        pygame.draw.rect(screen, (240, 240, 240), wheel_bg_rect)  # Light gray background
+        pygame.draw.rect(screen, (30, 26, 20), wheel_bg_rect)  # Light gray background
         
         # Draw main wheel circle
         pygame.draw.circle(screen, self.wheel_color, 
