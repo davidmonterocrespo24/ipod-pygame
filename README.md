@@ -4,10 +4,8 @@ A Python music player that emulates the classic iPod interface using Pygame, spe
 ## Visual Documentation
 
 ![iPod Image 1](./images/ipod1.jpg)
-*Description of first image*
 
 ![iPod Image 2](./images/ipod2.jpg)
-*Description of second image*
 ## 🎵 Features
 
 ### Authentic iPod Classic Interface
