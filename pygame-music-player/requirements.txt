@@ -8,6 +8,10 @@ ffpyplayer>=4.3.0
 # For better audio format support
 pygame-ce>=2.1.0  # Alternative to pygame with better features (optional)
 
+# YouTube support
+yt-dlp>=2023.11.16
+requests>=2.31.0
+
 # Standard library dependencies (included with Python)
 # sqlite3 - Database operations
 # pathlib - File path operations  

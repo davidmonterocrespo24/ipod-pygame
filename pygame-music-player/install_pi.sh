@@ -58,7 +58,6 @@ echo -e "${YELLOW}📦 Instalando dependencias del sistema...${NC}"
 sudo apt install -y \
     python3 \
     python3-pip \
-    python3-venv \
     git \
     python3-pygame \
     python3-dev \

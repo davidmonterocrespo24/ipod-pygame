@@ -28,6 +28,15 @@ class MenuManager:
 
         # Video files list
         self.video_files = []
+        
+        # YouTube related
+        self.youtube_search_query = ""
+        self.youtube_search_results = []
+        self.youtube_trending = []
+          # YouTube related
+        self.youtube_search_query = ""
+        self.youtube_search_results = []
+        self.youtube_trending = []
 
     def load_main_menu(self):
         """Load iPod Classic main menu"""
@@ -36,6 +45,7 @@ class MenuManager:
         self.current_list_items = [
             {"label": "Music", "action": "music"},
             {"label": "Videos", "action": "videos"},
+            {"label": "YouTube", "action": "youtube_menu"},
             {"label": "Photos", "action": "photos"},
             {"label": "Podcasts", "action": "podcasts"},
             {"label": "Extras", "action": "extras"},
@@ -465,3 +475,136 @@ class MenuManager:
     def get_current_list_type(self):
         """Get the current list type (e.g., 'artists', 'albums', 'songs')"""
         return getattr(self, "current_list_type", "")
+
+    # YouTube functionality methods
+    def load_youtube_menu(self):
+        """Load YouTube main menu"""
+        self.current_menu = "youtube_menu"
+        self.current_list_items = [
+            {"label": "Buscar Videos", "action": "youtube_search"},
+            {"label": "Música Trending", "action": "youtube_trending"},
+            {"label": "Mis Favoritos", "action": "youtube_favorites"},
+            {"label": "Vistos Recientemente", "action": "youtube_recent"},
+            {"label": "", "action": "none"},
+            {"label": "Volver al Menú Principal", "action": "go_back_to_main"}
+        ]
+        self.current_list_type = "normal"
+        self.selected_index = 0
+        self.scroll_offset = 0
+
+    def load_youtube_search_input(self):
+        """Load YouTube search input screen"""
+        self.current_menu = "youtube_search"
+        search_display = self.youtube_search_query if self.youtube_search_query else ""
+        self.current_list_items = [
+            {"label": f"Buscar: {search_display}_", "action": "none"},
+            {"label": "", "action": "none"},
+            {"label": "Ingrese término de búsqueda...", "action": "none"},
+            {"label": "", "action": "none"},
+            {"label": "A B C D E F G H I", "action": "input_char", "data": "ABCDEFGHI"},
+            {"label": "J K L M N O P Q R", "action": "input_char", "data": "JKLMNOPQR"},
+            {"label": "S T U V W X Y Z", "action": "input_char", "data": "STUVWXYZ"},
+            {"label": "0 1 2 3 4 5 6 7 8 9", "action": "input_char", "data": "0123456789"},
+            {"label": "Espacio    Borrar", "action": "input_special"},
+            {"label": "", "action": "none"},
+            {"label": "BUSCAR", "action": "execute_youtube_search"},
+            {"label": "Limpiar", "action": "clear_youtube_search"}
+        ]
+        self.current_list_type = "input"
+        self.selected_index = 0
+        self.scroll_offset = 0
+
+    def load_youtube_search_results(self, results, is_searching=False):
+        """Load YouTube search results"""
+        self.current_menu = "youtube_search_results"
+        if is_searching:
+            self.current_list_items = [
+                {"label": "Buscando...", "action": "none"},
+                {"label": "Por favor espere...", "action": "none"}
+            ]
+        elif not results:
+            self.current_list_items = [
+                {"label": "No se encontraron resultados", "action": "none"},
+                {"label": "Pruebe con otra búsqueda", "action": "none"},
+                {"label": "", "action": "none"},
+                {"label": "Nueva Búsqueda", "action": "youtube_search"}
+            ]
+        else:
+            self.current_list_items = []
+            for video in results:
+                duration_text = f" ({video['duration']})" if video['duration'] else ""
+                title = video['title'][:35] + duration_text
+                subtitle = f"por {video['uploader']}"
+                self.current_list_items.append({
+                    "label": title,
+                    "sublabel": subtitle,
+                    "action": "play_youtube_video",
+                    "data": video
+                })
+            
+            # Add navigation options
+            self.current_list_items.append({"label": "", "action": "none"})
+            self.current_list_items.append({"label": "Nueva Búsqueda", "action": "youtube_search"})
+        
+        self.current_list_type = "youtube_videos"
+        self.selected_index = 0
+        self.scroll_offset = 0
+
+    def load_youtube_trending(self, trending_videos, is_loading=False):
+        """Load YouTube trending music videos"""
+        self.current_menu = "youtube_trending"
+        if is_loading:
+            self.current_list_items = [
+                {"label": "Cargando videos trending...", "action": "none"},
+                {"label": "Por favor espere...", "action": "none"},
+                {"label": "Esto puede tomar unos segundos", "action": "none"},
+                {"label": "", "action": "none"},
+                {"label": "Cancelar", "action": "youtube_menu"}
+            ]
+        elif not trending_videos:
+            self.current_list_items = [
+                {"label": "No se pudieron cargar los videos", "action": "none"},
+                {"label": "Verifique su conexión a internet", "action": "none"},
+                {"label": "", "action": "none"},
+                {"label": "Reintentar", "action": "youtube_trending"},
+                {"label": "Volver al menú de YouTube", "action": "youtube_menu"}
+            ]
+        else:
+            self.current_list_items = []
+            for i, video in enumerate(trending_videos, 1):
+                duration_text = f" ({video['duration']})" if video['duration'] else ""
+                title = f"{i}. {video['title'][:30]}" + duration_text
+                subtitle = f"por {video['uploader']}"
+                self.current_list_items.append({
+                    "label": title,
+                    "sublabel": subtitle,
+                    "action": "play_youtube_video",
+                    "data": video
+                })
+            
+            # Add navigation options
+            self.current_list_items.append({"label": "", "action": "none"})
+            self.current_list_items.append({"label": "Actualizar lista", "action": "youtube_trending"})
+            self.current_list_items.append({"label": "Volver al menú de YouTube", "action": "youtube_menu"})
+        
+        self.current_list_type = "youtube_videos"
+        self.selected_index = 0
+        self.scroll_offset = 0
+
+    def add_char_to_youtube_search(self, char):
+        """Add character to YouTube search query"""
+        if len(self.youtube_search_query) < 50:  # Limit search length
+            self.youtube_search_query += char
+
+    def remove_char_from_youtube_search(self):
+        """Remove last character from YouTube search query"""
+        if self.youtube_search_query:
+            self.youtube_search_query = self.youtube_search_query[:-1]
+
+    def clear_youtube_search(self):
+        """Clear YouTube search query"""
+        self.youtube_search_query = ""
+
+    def get_youtube_search_query(self):
+        """Get current YouTube search query"""
+        return self.youtube_search_query

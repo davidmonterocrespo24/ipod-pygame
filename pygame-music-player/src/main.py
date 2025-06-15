@@ -1,6 +1,7 @@
 # Corrected code lines:
 
 import pygame
+import threading
 # Import our modular components
 from database import MusicDatabase
 from playback import PlaybackManager
@@ -13,6 +14,8 @@ from input_handler import InputHandler
 from music_controller import MusicController
 from wifi_manager import WiFiManager
 from click_wheel import ClickWheel
+from youtube_manager import YouTubeManager
+from youtube_player import YouTubePlayer
 from pathlib import Path
 
 
@@ -38,11 +41,10 @@ class iPodClassicUI:
         self.display_surface = pygame.Surface((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
         # Superficie para la click wheel (usa la altura calculada para la rueda)
         self.click_wheel_surface = pygame.Surface((self.SCREEN_WIDTH, self.CLICK_WHEEL_HEIGHT), pygame.SRCALPHA)
-        
-        # Initialize core components
+          # Initialize core components
         self.db = MusicDatabase(db_path="./ipod_music_library.db")
         self.playback = PlaybackManager(volume_change_callback=self.on_volume_changed)
-          # Initialize modular components
+        # Initialize modular components
         self.renderer = iPodRenderer(self.screen, self.ui_config)
         self.video_player = VideoPlayer(self.ui_config)
         self.cover_flow = CoverFlow(self.ui_config, self.db)
@@ -50,6 +52,8 @@ class iPodClassicUI:
         self.music_controller = MusicController(self.db, self.playback)
         self.wifi_manager = WiFiManager()
         self.click_wheel = ClickWheel(self.ui_config)
+        self.youtube_manager = YouTubeManager()
+        self.youtube_player = YouTubePlayer(self.ui_config)
         self.menu_manager = MenuManager(self.db,
                                         scan_video_files_callback=self.video_player.scan_video_files)
         
@@ -63,16 +67,19 @@ class iPodClassicUI:
         self.selected_index = 0
         self.scroll_offset = 0
         self.current_song_data = None
-        
-        # Settings state
+          # Settings state
         self.volume_control_active = False
-          # WiFi state
+        # WiFi state
         self.wifi_networks = []
         self.wifi_connecting = False
         self.wifi_selected_network = None
         self.wifi_scan_in_progress = False
         self.wifi_password_input = ""
         self.wifi_password_hidden = True
+        
+        # YouTube state
+        self.youtube_search_thread = None
+        self.youtube_trending_thread = None
         
         # Click Wheel state
         self.click_wheel_enabled = True
@@ -144,9 +151,30 @@ class iPodClassicUI:
                 self.music_controller.get_shuffle_mode(),
                 self.playback.get_volume()
             )
-            should_push_current = True
         elif self.current_menu == "cover_flow":
             self.cover_flow.load_cover_flow_data()
+        elif self.current_menu == "youtube_menu":
+            self.menu_manager.load_youtube_menu()
+        elif self.current_menu == "youtube_search":
+            self.menu_manager.load_youtube_search_input()
+        elif self.current_menu == "youtube_search_results":
+            self.menu_manager.load_youtube_search_results(
+                self.youtube_manager.search_results, 
+                self.youtube_manager.is_searching
+            )
+        elif self.current_menu == "youtube_trending":
+            # Check if we need to start loading trending videos
+            if not self.youtube_trending_thread or not self.youtube_trending_thread.is_alive():
+                self.youtube_trending_thread = threading.Thread(
+                    target=self._load_trending_videos
+                )
+                self.youtube_trending_thread.start()
+            
+            # Load menu with current state
+            self.menu_manager.load_youtube_trending(
+                self.youtube_manager.trending_videos,
+                self.youtube_manager.is_loading_trending
+            )
         elif self.current_menu == "wifi_menu":
             next_menu = "wifi_menu"
             current_network = self.wifi_manager.get_current_connection()
@@ -216,12 +244,38 @@ class iPodClassicUI:
                     if event.key in [pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE]:
                         self.volume_control_active = False
                     return
-                
-                # Handle video playback
+                  # Handle video playback
                 if self.current_menu == "video_playing":
                     if self.input_handler.handle_video_input(event):
                         # Video was stopped, return to videos menu
                         self.current_menu = "videos"
+                        self._load_current_menu()
+                    return
+                
+                # Handle YouTube video playback
+                if self.current_menu == "youtube_playing":
+                    if self._handle_youtube_video_input(event):
+                        # Video was stopped, return to previous menu
+                        if self.menu_stack:
+                            self.current_menu = self.menu_stack.pop()
+                        else:
+                            self.current_menu = "youtube_menu"
+                        self._load_current_menu()
+                    return
+                
+                # Handle YouTube search input
+                if self.current_menu == "youtube_search":
+                    if event.key == pygame.K_ESCAPE:
+                        self.go_back()
+                    elif event.key == pygame.K_RETURN:
+                        # Select current item for character input
+                        self.select_item()
+                    # Add character input handling for search
+                    elif event.unicode.isprintable() and len(event.unicode) == 1:
+                        self.menu_manager.add_char_to_youtube_search(event.unicode.upper())
+                        self._load_current_menu()
+                    elif event.key == pygame.K_BACKSPACE:
+                        self.menu_manager.remove_char_from_youtube_search()
                         self._load_current_menu()
                     return
                 
@@ -317,23 +371,85 @@ class iPodClassicUI:
         action = selected.get("action")
         data = selected.get("data")
         
+        print(f"Acción seleccionada: {action}")
+        
         if action == "none":
             return
         
         # Push current menu to stack for navigation history
-        # Simplificamos la lógica: añadir a la pila antes de cambiar a un nuevo menú, excepto now_playing directo.
-        # if action not in ["refresh_library", "quit", "play_all_shuffle", "toggle_repeat", "toggle_shuffle", "set_volume"]:
-        #     if self.current_menu not in ["now_playing"]:
-        #         self.menu_stack.append(self.current_menu)
-
-        next_menu = None # Variable para saber a qué menú vamos a ir
-        should_push_current = True # Bandera para decidir si guardar el menú actual
+        next_menu = None
+        should_push_current = True
 
         # Handle different actions
         if action in ["music", "videos", "photos", "podcasts", "extras", "settings"]:
             next_menu = action
             self._load_current_menu()
             should_push_current = True
+
+        elif action == "youtube_menu":
+            next_menu = "youtube_menu"
+            should_push_current = True
+        
+        elif action == "youtube_search":
+            next_menu = "youtube_search"
+            should_push_current = True
+        
+        elif action == "youtube_trending":
+            print("Seleccionado: Música Trending")
+            next_menu = "youtube_trending"
+            # Start loading trending videos in background
+            if not self.youtube_trending_thread or not self.youtube_trending_thread.is_alive():
+                print("Iniciando hilo de carga de videos trending...")
+                self.youtube_trending_thread = threading.Thread(
+                    target=self._load_trending_videos
+                )
+                self.youtube_trending_thread.start()
+            should_push_current = True
+        
+        elif action == "execute_youtube_search":
+            query = self.menu_manager.get_youtube_search_query()
+            if query.strip():
+                next_menu = "youtube_search_results"
+                # Start search in background
+                if not self.youtube_search_thread or not self.youtube_search_thread.is_alive():
+                    self.youtube_search_thread = threading.Thread(
+                        target=self.youtube_manager.search_videos,
+                        args=(query,)
+                    )
+                    self.youtube_search_thread.start()
+                should_push_current = True
+        
+        elif action == "clear_youtube_search":
+            self.menu_manager.clear_youtube_search()
+            self._load_current_menu()
+            should_push_current = False
+        
+        elif action == "play_youtube_video":
+            if self.youtube_player.play_youtube_video(data):
+                next_menu = "youtube_playing"
+                should_push_current = True
+        
+        elif action == "input_char":
+            # Handle character selection in search
+            if self.current_menu == "youtube_search":
+                char_set = data
+                # For simplicity, add first character. In real implementation,
+                # you'd want a character selector
+                if char_set:
+                    self.menu_manager.add_char_to_youtube_search(char_set[0])
+                    self._load_current_menu()
+            should_push_current = False
+        
+        elif action == "input_special":
+            # Handle special input (space, backspace)
+            if self.current_menu == "youtube_search":
+                if self.selected_index == 8:  # Space/Backspace line
+                    if hasattr(self, '_space_selected') and self._space_selected:
+                        self.menu_manager.remove_char_from_youtube_search()
+                    else:
+                        self.menu_manager.add_char_to_youtube_search(' ')
+                    self._load_current_menu()
+            should_push_current = False
 
         elif action == "wifi_menu":
             next_menu = "wifi_menu"
@@ -498,26 +614,55 @@ class iPodClassicUI:
             return items[self.selected_index].get("action") == "set_volume"
         return False
     
+    def _handle_youtube_video_input(self, event):
+        """Handle input during YouTube video playback"""
+        if event.key in [pygame.K_ESCAPE, pygame.K_BACKSPACE]:
+            self.youtube_player.stop_video()
+            return True  # Stop video and go back
+        elif event.key == pygame.K_SPACE:
+            # Toggle play/pause
+            if self.youtube_player.is_paused:
+                self.youtube_player.resume_video()
+            else:
+                self.youtube_player.pause_video()
+            return False  # Continue playing but toggle pause
+        elif event.key == pygame.K_LEFT:
+            self.youtube_player.seek_backward(10)
+            return False
+        elif event.key == pygame.K_RIGHT:
+            self.youtube_player.seek_forward(10)
+            return False
+        return False
+    
     def run(self):
         """Main application loop"""
         while self.running:
             # Handle input
             self.handle_input()
+            
             # Update animations
             dt = self.clock.get_time() / 1000.0
             if self.current_menu == "cover_flow":
                 self.cover_flow.update_cover_flow_animation(dt)
+            
             # Update Click Wheel
             if self.click_wheel_enabled:
                 self.click_wheel.update()
+            
             # Update current song data
             if self.music_controller.get_current_song_info():
                 self.current_song_data = self.music_controller.get_current_song_info()
+            
+            # Update YouTube player
+            if self.current_menu == "youtube_playing":
+                self.youtube_player.update_playback_position(dt)
+            
             # --- RENDER PANTALLA ---
             self.display_surface.fill(self.ui_config.BG_COLOR)
-            self.renderer.screen = self.display_surface  # Renderizador usa la superficie de pantalla
+            self.renderer.screen = self.display_surface
             self.renderer.draw_background()
             self.renderer.draw_header(self.current_menu, self.playback.is_playing and not self.playback.is_paused)
+            
             if self.current_menu == "now_playing":
                 self.renderer.draw_now_playing(self.current_song_data,
                                               self.playback.get_current_position_s(),
@@ -526,6 +671,8 @@ class iPodClassicUI:
                                               self.music_controller.get_playlist_info())
             elif self.current_menu == "video_playing":
                 self.video_player.draw_video_playing(self.display_surface, self.renderer)
+            elif self.current_menu == "youtube_playing":
+                self.youtube_player.draw_youtube_video_playing(self.display_surface, self.renderer)
             elif self.current_menu == "settings":
                 items = self.menu_manager.get_current_items()
                 self.renderer.draw_settings_menu(items, self.selected_index, self.scroll_offset)
@@ -535,17 +682,19 @@ class iPodClassicUI:
                 items = self.menu_manager.get_current_items()
                 menu_type = self.menu_manager.get_current_list_type()
                 self.renderer.draw_menu(items, self.selected_index, self.scroll_offset, menu_type)
+            
             if self.current_menu != "now_playing" and self.current_song_data:
                 self.renderer.draw_mini_player(self.current_song_data,
                                               self.playback.get_current_position_s(),
                                               self.current_song_data[5],
                                               self.playback.is_playing,
                                               self.playback.is_paused)
+            
             # --- RENDER CLICK WHEEL ---
             self.click_wheel_surface.fill((0,0,0,0))  # Limpiar con transparencia
             if self.click_wheel_enabled:
                 self.click_wheel.draw(self.click_wheel_surface)
-            # --- BLITTEAR AMBAS PARTES EN LA VENTANA PRINCIPAL ---
+              # --- BLITTEAR AMBAS PARTES EN LA VENTANA PRINCIPAL ---
             self.screen.blit(self.display_surface, (0, 0))
             self.screen.blit(self.click_wheel_surface, (0, self.SCREEN_HEIGHT))
             pygame.display.flip()
@@ -558,6 +707,8 @@ class iPodClassicUI:
         """Clean up resources before exit"""
         if hasattr(self.video_player, 'stop_video'):
             self.video_player.stop_video()
+        if hasattr(self.youtube_player, 'stop_video'):
+            self.youtube_player.stop_video()
         pygame.quit()
     
     def _handle_click_wheel_actions(self, actions):
@@ -584,7 +735,12 @@ class iPodClassicUI:
     
     def _handle_play_pause(self):
         """Handle play/pause button from Click Wheel"""
-        if self.current_menu == "now_playing" or self.current_song_data:
+        if self.current_menu == "youtube_playing":
+            if self.youtube_player.is_playing and not self.youtube_player.is_paused:
+                self.youtube_player.pause_video()
+            elif self.youtube_player.is_paused:
+                self.youtube_player.resume_video()
+        elif self.current_menu == "now_playing" or self.current_song_data:
             if self.playback.is_playing and not self.playback.is_paused:
                 self.playback.pause()
             elif self.playback.is_paused:
@@ -600,7 +756,9 @@ class iPodClassicUI:
     
     def _handle_forward(self):
         """Handle forward button from Click Wheel"""
-        if self.current_menu == "now_playing":
+        if self.current_menu == "youtube_playing":
+            self.youtube_player.seek_forward(10)
+        elif self.current_menu == "now_playing":
             self.music_controller.next_song()
         elif self.current_menu == "cover_flow":
             self.cover_flow.start_cover_flow_animation("right")
@@ -613,7 +771,9 @@ class iPodClassicUI:
     
     def _handle_backward(self):
         """Handle backward button from Click Wheel"""
-        if self.current_menu == "now_playing":
+        if self.current_menu == "youtube_playing":
+            self.youtube_player.seek_backward(10)
+        elif self.current_menu == "now_playing":
             self.music_controller.previous_song()
         elif self.current_menu == "cover_flow":
             self.cover_flow.start_cover_flow_animation("left")
@@ -624,6 +784,36 @@ class iPodClassicUI:
                 self.playback.set_volume(max(0.0, self.playback.get_volume() - 0.05))
                 self._load_current_menu()
     
+    def _load_trending_videos(self):
+        """Load trending videos and update menu"""
+        print("Iniciando carga de videos trending...")
+        try:
+            # Get trending videos
+            print("Obteniendo videos trending de YouTube...")
+            trending_videos = self.youtube_manager.get_trending_music_videos()
+            print(f"Videos trending obtenidos: {len(trending_videos)}")
+            
+            # Update menu with results
+            print("Actualizando menú con los resultados...")
+            self.menu_manager.load_youtube_trending(
+                trending_videos,
+                self.youtube_manager.is_loading_trending
+            )
+            
+            # Force menu refresh
+            if self.current_menu == "youtube_trending":
+                print("Forzando actualización del menú...")
+                self._load_current_menu()
+        except Exception as e:
+            print(f"Error cargando videos trending: {e}")
+            # Show error in menu
+            self.menu_manager.load_youtube_trending(
+                [],
+                False
+            )
+            if self.current_menu == "youtube_trending":
+                self._load_current_menu()
+
 
 if __name__ == '__main__':
     # Create a music folder if it doesn't exist for easy testing

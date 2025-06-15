@@ -11,7 +11,6 @@ class ClickWheel:
     
     # Click Wheel area height constant
     CLICK_WHEEL_AREA_HEIGHT = 162  # Height of the click wheel area
-    
     def __init__(self, ui_config):
         self.ui_config = ui_config
         # Click Wheel dimensions and position adaptados a 358x162 (nueva area de Click Wheel)
@@ -19,7 +18,7 @@ class ClickWheel:
         self.center_button_radius = 30 # Ajustado proporcionalmente
         self.wheel_center_x = self.ui_config.SCREEN_WIDTH // 2  # Centro del nuevo ancho (358/2 = 179)
         # Posicionar el Click Wheel en la parte inferior de la pantalla
-        self.wheel_center_y = self.ui_config.DISPLAY_HEIGHT + (self.CLICK_WHEEL_AREA_HEIGHT // 2)
+        self.wheel_center_y = self.CLICK_WHEEL_AREA_HEIGHT // 2  # Centro vertical de la zona del Click Wheel
         
         # Colors
         self.wheel_color = (220, 220, 220)  # Light gray wheel
@@ -204,9 +203,12 @@ class ClickWheel:
             self.wheel_momentum *= self.momentum_decay
         else:
             self.wheel_momentum = 0
-    
     def draw(self, screen):
         """Draw the Click Wheel on the screen"""
+        # Draw background for the Click Wheel area
+        wheel_bg_rect = pygame.Rect(0, 0, screen.get_width(), screen.get_height())
+        pygame.draw.rect(screen, (240, 240, 240), wheel_bg_rect)  # Light gray background
+        
         # Draw main wheel circle
         pygame.draw.circle(screen, self.wheel_color, 
                          (self.wheel_center_x, self.wheel_center_y), 
@@ -318,35 +320,44 @@ class ClickWheel:
         # Draw the polygon if we have enough points
         if len(points) >= 3:
             pygame.draw.polygon(screen, color, points)
-    
     def _draw_button_labels(self, screen):
         """Draw labels for the four buttons (iPod Classic layout)"""
-        font = self.ui_config.font_small
+        # Use a safe font fallback
+        try:
+            font = self.ui_config.font_small
+        except:
+            font = pygame.font.Font(None, 14)  # Fallback font
+            
         label_distance = self.wheel_radius - 15
+        
         # MENU (arriba)
         menu_x = self.wheel_center_x
         menu_y = self.wheel_center_y - label_distance
         menu_text = font.render("MENU", True, (60, 60, 60))
         menu_rect = menu_text.get_rect(center=(menu_x, menu_y))
         screen.blit(menu_text, menu_rect)
+        
         # PLAY/PAUSE (abajo)
         play_x = self.wheel_center_x
         play_y = self.wheel_center_y + label_distance
         play_text = font.render("PLAY", True, (60, 60, 60))
         play_rect = play_text.get_rect(center=(play_x, play_y))
         screen.blit(play_text, play_rect)
+        
         # ATRÁS (izquierda)
         backward_x = self.wheel_center_x - label_distance
         backward_y = self.wheel_center_y
         backward_text = font.render("<<", True, (60, 60, 60))
         backward_rect = backward_text.get_rect(center=(backward_x, backward_y))
         screen.blit(backward_text, backward_rect)
+        
         # ADELANTE (derecha)
         forward_x = self.wheel_center_x + label_distance
         forward_y = self.wheel_center_y
         forward_text = font.render(">>", True, (60, 60, 60))
         forward_rect = forward_text.get_rect(center=(forward_x, forward_y))
         screen.blit(forward_text, forward_rect)
+        
         # SELECT (centro)
         center_text = font.render("SELECT", True, (80, 80, 80))
         center_rect = center_text.get_rect(center=(self.wheel_center_x, self.wheel_center_y))
