@@ -3,10 +3,10 @@
 A Python music player that emulates the classic iPod interface using Pygame, specially designed for Raspberry Pi Zero but compatible with any system.
 ## Visual Documentation
 
-![iPod Image 1](./images/image1.jpg)
+![iPod Image 1](./images/ipod1.jpg)
 *Description of first image*
 
-![iPod Image 2](./images/image2.jpg)
+![iPod Image 2](./images/ipod2.jpg)
 *Description of second image*
 ## 🎵 Features
 
