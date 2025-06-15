@@ -1,4 +1,4 @@
-# iPod Classic Music Player
+# iPod Classic Music Player for Raspberry Pi Zero
 
 A Python music player that emulates the classic iPod interface using Pygame, specially designed for Raspberry Pi Zero but compatible with any system.
 ## Visual Documentation
