@@ -4,6 +4,7 @@ Implements the iconic iPod Click Wheel with all its functionalities.
 """
 import pygame
 import math
+import pygame.gfxdraw
 
 
 class ClickWheel:
@@ -209,29 +210,20 @@ class ClickWheel:
         wheel_bg_rect = pygame.Rect(0, 0, screen.get_width(), screen.get_height())
         pygame.draw.rect(screen, (30, 26, 20), wheel_bg_rect)  # Light gray background
         
-        # Draw main wheel circle
-        pygame.draw.circle(screen, self.wheel_color, 
-                         (self.wheel_center_x, self.wheel_center_y), 
-                         self.wheel_radius)
-        
-        # Draw wheel border
-        pygame.draw.circle(screen, self.wheel_border_color,
-                         (self.wheel_center_x, self.wheel_center_y),
-                         self.wheel_radius, 2)
+        # Draw main wheel circle (antialiasing)
+        pygame.gfxdraw.filled_circle(screen, self.wheel_center_x, self.wheel_center_y, self.wheel_radius, self.wheel_color)
+        pygame.gfxdraw.aacircle(screen, self.wheel_center_x, self.wheel_center_y, self.wheel_radius, self.wheel_border_color)
         
         # Draw button area highlights
         self._draw_button_areas(screen)
         
-        # Draw center button
+        # Draw center button (antialiasing)
         center_color = self.button_pressed_color if self.center_button_pressed else self.center_button_color
-        pygame.draw.circle(screen, center_color,
-                         (self.wheel_center_x, self.wheel_center_y),
-                         self.center_button_radius)
+        pygame.gfxdraw.filled_circle(screen, self.wheel_center_x, self.wheel_center_y, self.center_button_radius, center_color)
+        pygame.gfxdraw.aacircle(screen, self.wheel_center_x, self.wheel_center_y, self.center_button_radius, self.center_button_border)
         
-        # Draw center button border
-        pygame.draw.circle(screen, self.center_button_border,
-                         (self.wheel_center_x, self.wheel_center_y),
-                         self.center_button_radius, 2)
+        # Draw center button border (extra thickness)
+        pygame.gfxdraw.aacircle(screen, self.wheel_center_x, self.wheel_center_y, self.center_button_radius+1, self.center_button_border)
         
         # Draw button labels
         self._draw_button_labels(screen)

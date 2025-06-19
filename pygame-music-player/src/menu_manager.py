@@ -297,19 +297,14 @@ class MenuManager:
         self.selected_index = 0
         self.scroll_offset = 0    
 
-    def load_settings_menu(self, repeat_mode, shuffle_mode, volume):
-        """Load settings menu with current values"""
+    def load_settings_menu(self, repeat_mode, shuffle_mode, volume, current_font="Helvetica"):
+        """Load settings menu with current values, including font selection"""
         self.current_menu = "settings"
         self.current_list_items = [
             {"label": f"Volumen: {int(volume * 100)}%", "action": "set_volume"},
-            {
-                "label": f"Repetir: {repeat_mode.capitalize()}",
-                "action": "toggle_repeat",
-            },
-            {
-                "label": f"Aleatorio: {'Activado' if shuffle_mode else 'Desactivado'}",
-                "action": "toggle_shuffle",
-            },
+            {"label": f"Repetir: {repeat_mode.capitalize()}", "action": "toggle_repeat"},
+            {"label": f"Aleatorio: {'Activado' if shuffle_mode else 'Desactivado'}", "action": "toggle_shuffle"},
+            {"label": f"Fuente del sistema: {current_font}", "action": "select_font"},
             {"label": "WiFi", "action": "wifi_menu"},
         ]
         self.selected_index = 0
@@ -608,3 +603,15 @@ class MenuManager:
     def get_youtube_search_query(self):
         """Get current YouTube search query"""
         return self.youtube_search_query
+
+    def load_font_menu(self, current_font="Helvetica"):
+        """Load font selection menu"""
+        self.current_menu = "font_menu"
+        fonts = ["Helvetica", "Arial", "Source Sans 3"]
+        self.current_list_items = [
+            {"label": f"{font}{' ✓' if font == current_font else ''}", "action": "set_font", "data": font}
+            for font in fonts
+        ]
+        self.current_list_items.append({"label": "Volver", "action": "back_to_settings"})
+        self.selected_index = 0
+        self.scroll_offset = 0

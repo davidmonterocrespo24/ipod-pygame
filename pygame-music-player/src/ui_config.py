@@ -81,44 +81,30 @@ class UIConfig:
         self._init_fonts()
     
     def _init_fonts(self):
-        """Initialize iPod Classic style fonts"""
-        # iPod used clean, simple fonts. We'll use system fonts that are similar
-        font_name_main = None
-        font_name_bold = None 
-        
+        """Initialize iPod Classic style fonts (Helvetica everywhere, bold)"""
+        font_name_main = 'helvetica'
+        font_name_bold = 'helvetica'
         try:
-            # Check for fonts similar to iPod's font (Helvetica/Arial family)
-            if os.name == 'nt':  # Windows
-                font_name_main = 'Arial' 
-                font_name_bold = 'Arial'
-            else:  # Linux, macOS
-                available_fonts = pygame.font.get_fonts()
-                if 'helvetica' in available_fonts:
-                    font_name_main = 'helvetica'
-                    font_name_bold = 'helvetica'
-                elif 'dejavusans' in available_fonts:
-                    font_name_main = 'dejavusans'
-                    font_name_bold = 'dejavusans'
-                elif 'arial' in available_fonts:
-                    font_name_main = 'arial'
-                    font_name_bold = 'arial'
-
-            # iPod Classic font sizes (adjusted for clarity)
-            self.font_header = pygame.font.SysFont(font_name_main, 12, bold=True)  # Small header text
-            self.font_menu_item = pygame.font.SysFont(font_name_main, 16)  # Main menu items
-            self.font_menu_item_small = pygame.font.SysFont(font_name_main, 12)  # Secondary info
-            self.font_now_playing_title = pygame.font.SysFont(font_name_bold, 14, bold=True)  # Song title
-            self.font_now_playing_artist = pygame.font.SysFont(font_name_main, 12)  # Artist name
-            self.font_now_playing_album = pygame.font.SysFont(font_name_main, 11)  # Album name
-            self.font_time = pygame.font.SysFont(font_name_main, 11)  # Time display
-            self.font_mini_player = pygame.font.SysFont(font_name_main, 11)  # Mini player
-            self.font_status = pygame.font.SysFont(font_name_main, 12)  # Status icons
-            self.font_track_title = pygame.font.SysFont(font_name_bold, 16)  # Track title in video
-            self.font_small = pygame.font.SysFont(font_name_main, 10)  # Small font for settings, etc.
-            
+            available_fonts = pygame.font.get_fonts()
+            if 'helvetica' not in available_fonts:
+                # Fallback to Arial if Helvetica is not available
+                font_name_main = 'arial'
+                font_name_bold = 'arial'
+            # Todas las fuentes en negrita
+            self.font_header = pygame.font.SysFont(font_name_main, 12, bold=True)
+            self.font_menu_item = pygame.font.SysFont(font_name_main, 16, bold=True)
+            self.font_menu_item_small = pygame.font.SysFont(font_name_main, 12, bold=True)
+            self.font_now_playing_title = pygame.font.SysFont(font_name_bold, 14, bold=True)
+            self.font_now_playing_artist = pygame.font.SysFont(font_name_main, 12, bold=True)
+            self.font_now_playing_album = pygame.font.SysFont(font_name_main, 11, bold=True)
+            self.font_time = pygame.font.SysFont(font_name_main, 11, bold=True)
+            self.font_mini_player = pygame.font.SysFont(font_name_main, 11, bold=True)
+            self.font_status = pygame.font.SysFont(font_name_main, 12, bold=True)
+            self.font_track_title = pygame.font.SysFont(font_name_bold, 16, bold=True)
+            self.font_small = pygame.font.SysFont(font_name_main, 10, bold=True)
         except Exception as e:
-            print(f"Error loading system fonts: {e}. Using Pygame default font.")
-            # Fallback to default fonts with iPod-appropriate sizes
+            print(f"Error loading Helvetica/Arial: {e}. Using Pygame default font.")
+            # Fallback to default fonts with iPod-appropriate sizes (bold)
             self.font_header = pygame.font.Font(None, 16)
             self.font_menu_item = pygame.font.Font(None, 20)
             self.font_menu_item_small = pygame.font.Font(None, 16)
@@ -138,3 +124,43 @@ class UIConfig:
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes:02d}:{secs:02d}"
+
+    def set_font(self, font_name):
+        """Set the system font dynamically and update all font objects"""
+        font_map = {
+            "Helvetica": "helvetica",
+            "Arial": "arial",
+            "Source Sans 3": "source sans 3"
+        }
+        selected_font = font_map.get(font_name, "helvetica")
+        try:
+            available_fonts = pygame.font.get_fonts()
+            if selected_font not in available_fonts:
+                # Fallback to Arial if selected font is not available
+                selected_font = "arial"
+            # Todas las fuentes en negrita
+            self.font_header = pygame.font.SysFont(selected_font, 12, bold=True)
+            self.font_menu_item = pygame.font.SysFont(selected_font, 16, bold=True)
+            self.font_menu_item_small = pygame.font.SysFont(selected_font, 12, bold=True)
+            self.font_now_playing_title = pygame.font.SysFont(selected_font, 14, bold=True)
+            self.font_now_playing_artist = pygame.font.SysFont(selected_font, 12, bold=True)
+            self.font_now_playing_album = pygame.font.SysFont(selected_font, 11, bold=True)
+            self.font_time = pygame.font.SysFont(selected_font, 11, bold=True)
+            self.font_mini_player = pygame.font.SysFont(selected_font, 11, bold=True)
+            self.font_status = pygame.font.SysFont(selected_font, 12, bold=True)
+            self.font_track_title = pygame.font.SysFont(selected_font, 16, bold=True)
+            self.font_small = pygame.font.SysFont(selected_font, 10, bold=True)
+        except Exception as e:
+            print(f"Error loading font {font_name}: {e}. Using Pygame default font.")
+            # Fallback to default fonts with iPod-appropriate sizes (bold)
+            self.font_header = pygame.font.Font(None, 16)
+            self.font_menu_item = pygame.font.Font(None, 20)
+            self.font_menu_item_small = pygame.font.Font(None, 16)
+            self.font_now_playing_title = pygame.font.Font(None, 18)
+            self.font_now_playing_artist = pygame.font.Font(None, 16)
+            self.font_now_playing_album = pygame.font.Font(None, 14)
+            self.font_time = pygame.font.Font(None, 14)
+            self.font_mini_player = pygame.font.Font(None, 14)
+            self.font_status = pygame.font.Font(None, 16)
+            self.font_track_title = pygame.font.Font(None, 22)
+            self.font_small = pygame.font.Font(None, 12)

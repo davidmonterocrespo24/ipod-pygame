@@ -17,6 +17,7 @@ from click_wheel import ClickWheel
 from youtube_manager import YouTubeManager
 from youtube_player import YouTubePlayer
 from pathlib import Path
+import pygame.gfxdraw
 
 
 class iPodClassicUI:
@@ -31,6 +32,7 @@ class iPodClassicUI:
     def __init__(self):
         pygame.init()
           # Initialize UI configuration
+        self.selected_font = "Helvetica"
         self.ui_config = UIConfig()
         
         # Set up display with new size
@@ -149,8 +151,11 @@ class iPodClassicUI:
             self.menu_manager.load_settings_menu(
                 self.music_controller.get_repeat_mode(),
                 self.music_controller.get_shuffle_mode(),
-                self.playback.get_volume()
+                self.playback.get_volume(),
+                self.selected_font
             )
+        elif self.current_menu == "font_menu":
+            self.menu_manager.load_font_menu(self.selected_font)
         elif self.current_menu == "cover_flow":
             self.cover_flow.load_cover_flow_data()
         elif self.current_menu == "youtube_menu":
@@ -367,13 +372,21 @@ class iPodClassicUI:
         if not items or self.selected_index >= len(items):
             return
         
-        selected = items[self.selected_index]
-        action = selected.get("action")
-        data = selected.get("data")
-        
-        print(f"Acción seleccionada: {action}")
-        
-        if action == "none":
+        item = items[self.selected_index]
+        action = item.get("action")
+        if self.current_menu == "settings" and action == "select_font":
+            self.current_menu = "font_menu"
+            self._load_current_menu()
+        elif self.current_menu == "font_menu" and action == "set_font":
+            font = item.get("data")
+            self.selected_font = font
+            self.ui_config.set_font(font)
+            self.current_menu = "settings"
+            self._load_current_menu()
+        elif self.current_menu == "font_menu" and action == "back_to_settings":
+            self.current_menu = "settings"
+            self._load_current_menu()
+        elif action == "none":
             return
         
         # Push current menu to stack for navigation history
@@ -425,14 +438,14 @@ class iPodClassicUI:
             should_push_current = False
         
         elif action == "play_youtube_video":
-            if self.youtube_player.play_youtube_video(data):
+            if self.youtube_player.play_youtube_video(item.get("data")):
                 next_menu = "youtube_playing"
                 should_push_current = True
         
         elif action == "input_char":
             # Handle character selection in search
             if self.current_menu == "youtube_search":
-                char_set = data
+                char_set = item.get("data")
                 # For simplicity, add first character. In real implementation,
                 # you'd want a character selector
                 if char_set:
@@ -482,25 +495,25 @@ class iPodClassicUI:
         
         elif action == "view_songs_by_artist":
             next_menu = "songs_by_artist"
-            self.menu_manager.load_songs_by_artist(data)
+            self.menu_manager.load_songs_by_artist(item.get("data"))
             self.selected_index = 0
             self.scroll_offset = 0
         
         elif action == "view_songs_by_album":
             next_menu = "songs_by_album"
-            self.menu_manager.load_songs_by_album(data)
+            self.menu_manager.load_songs_by_album(item.get("data"))
             self.selected_index = 0
             self.scroll_offset = 0
         
         elif action == "play_video":
-            if self.video_player.play_video(data):
+            if self.video_player.play_video(item.get("data")):
                  next_menu = "video_playing"
         
         elif action == "play_song":
             try:
                 if isinstance(items, list) and all(isinstance(item, dict) for item in items):
-                    if self.music_controller.play_song_from_list(data, items):
-                        self.current_song_data = data
+                    if self.music_controller.play_song_from_list(item.get("data"), items):
+                        self.current_song_data = item.get("data")
                         next_menu = "now_playing" # Vamos a la pantalla de reproducción
                         # Al reproducir una canción desde una lista, SÍ queremos poder volver a la lista.
                         # El menú actual (la lista de canciones) SÍ debe ir a la pila.
@@ -515,9 +528,9 @@ class iPodClassicUI:
                 print(f"Error playing song: {e}")
                 # Try to recover by loading the songs list again
                 if self.current_menu == "songs_by_album":
-                    self.menu_manager.load_songs_by_album(data)
+                    self.menu_manager.load_songs_by_album(item.get("data"))
                 elif self.current_menu == "songs_by_artist":
-                    self.menu_manager.load_songs_by_artist(data)
+                    self.menu_manager.load_songs_by_artist(item.get("data"))
                 should_push_current = False # No cambiamos de menú si falla, no guardar nada
 
         
@@ -681,7 +694,22 @@ class iPodClassicUI:
             else:
                 items = self.menu_manager.get_current_items()
                 menu_type = self.menu_manager.get_current_list_type()
-                self.renderer.draw_menu(items, self.selected_index, self.scroll_offset, menu_type)
+                # Menús donde se debe mostrar la mitad de portadas
+                if self.current_menu in ["main", "albums", "artists", "music"]:
+                    # Obtener lista de álbumes si aplica
+                    albums = None
+                    if self.current_menu == "albums":
+                        albums = self.menu_manager.get_current_items()
+                    self.renderer.draw_menu_with_album_art(
+                        items,
+                        self.selected_index,
+                        self.scroll_offset,
+                        menu_type,
+                        cover_flow=self.cover_flow,
+                        albums=albums
+                    )
+                else:
+                    self.renderer.draw_menu(items, self.selected_index, self.scroll_offset, menu_type)
             
             if self.current_menu != "now_playing" and self.current_song_data:
                 self.renderer.draw_mini_player(self.current_song_data,

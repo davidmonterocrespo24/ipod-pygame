@@ -5,6 +5,18 @@ Handles album art display and Cover Flow navigation with animations.
 import pygame
 import os
 from pathlib import Path
+import io
+try:
+    from mutagen.mp3 import MP3
+    from mutagen.id3 import ID3, APIC
+except ImportError:
+    MP3 = None
+    ID3 = None
+    APIC = None
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 
 class CoverFlow:
@@ -31,60 +43,90 @@ class CoverFlow:
         # Get albums from database
         albums_from_db = self.db.get_albums()
         self.cover_flow_albums = []
-        
         for album_name in albums_from_db:
-            # In a real scenario, find art_path here.
-            # For now, we'll use placeholder data
+            # Buscar una canción de este álbum para extraer la carátula
+            songs = self.db.get_songs_by_album(album_name)
+            song_path = None
+            if songs and len(songs[0]) > 1:
+                song_path = songs[0][1]  # path es el segundo campo
             self.cover_flow_albums.append({
-                "name": album_name, 
-                "art_path": None  # TODO: Implement actual art path finding
+                "name": album_name,
+                "art_path": None,  # Se puede mejorar si tienes carátulas externas
+                "song_path": song_path
             })
-
         if not self.cover_flow_albums:
             # Handle case with no albums
             print("No albums found for Cover Flow.")
-            self.cover_flow_albums = [{"name": "No Albums Found", "art_path": None}]
-            
+            self.cover_flow_albums = [{"name": "No Albums Found", "art_path": None, "song_path": None}]
         self.current_cover_flow_index = 0
 
-    def get_album_art(self, album_name, art_path=None, size=(80, 80)):
-        """Get album art surface, with caching"""
-        if album_name in self.cover_art_cache and size in self.cover_art_cache[album_name]:
-            return self.cover_art_cache[album_name][size]
+    def get_album_art(self, album_name, art_path=None, size=(80, 80), song_path=None):
+        """Get album art surface, with caching. Tries to extract from audio file metadata if possible."""
+        cache_key = (album_name, art_path, song_path)
+        if cache_key in self.cover_art_cache and size in self.cover_art_cache[cache_key]:
+            return self.cover_art_cache[cache_key][size]
 
-        try:
-            if art_path and os.path.exists(art_path):
-                # Load actual image file
+        raw_image = None
+        # 1. Intentar extraer carátula de metadatos si hay song_path
+        if song_path and MP3 and ID3 and APIC:
+            try:
+                audio = MP3(song_path, ID3=ID3)
+                found_valid_image = False
+                for tag in audio.tags.values():
+                    if isinstance(tag, APIC):
+                        mime = getattr(tag, 'mime', '').lower()
+                        if mime in ('image/jpeg', 'image/jpg', 'image/png'):
+                            img_data = tag.data
+                            if Image is not None:
+                                img_stream = io.BytesIO(img_data)
+                                try:
+                                    pil_img = Image.open(img_stream).convert('RGBA')
+                                    mode = pil_img.mode
+                                    size = pil_img.size
+                                    data = pil_img.tobytes()
+                                    raw_image = pygame.image.fromstring(data, size, mode)
+                                    found_valid_image = True
+                                    break
+                                except Exception as e:
+                                    print(f"Error abriendo imagen APIC válida: {e}")
+                            else:
+                                img_stream = io.BytesIO(img_data)
+                                try:
+                                    raw_image = pygame.image.load(img_stream)
+                                    found_valid_image = True
+                                    break
+                                except Exception as e:
+                                    print(f"Error abriendo imagen APIC con pygame: {e}")
+                        else:
+                            print(f"Tipo MIME de carátula no soportado: {mime}")
+                if not found_valid_image:
+                    print(f"No se encontró ninguna carátula válida en metadatos para {song_path}")
+            except Exception as e:
+                print(f"Error extrayendo carátula de metadatos: {e}")
+        # 2. Si no se pudo, intentar cargar desde art_path
+        if raw_image is None and art_path and os.path.exists(art_path):
+            try:
                 raw_image = pygame.image.load(art_path).convert_alpha()
-            else:
-                # Create a placeholder if no art_path or not found
-                raw_image = pygame.Surface((200, 200), pygame.SRCALPHA)
-                raw_image.fill(self.config.NOW_PLAYING_ALBUM_ART_BG)
-                pygame.draw.rect(raw_image, self.config.ALBUM_ART_BORDER_COLOR, raw_image.get_rect(), 1)
-                
-                # Show album name on placeholder
-                placeholder_font = pygame.font.SysFont(None, 24)
-                art_text_surf = placeholder_font.render(album_name[:15], True, self.config.ALBUM_ART_BORDER_COLOR)
-                art_text_rect = art_text_surf.get_rect(center=(raw_image.get_width() // 2, raw_image.get_height() // 2))
-                raw_image.blit(art_text_surf, art_text_rect)
-
-            # Scale to requested size
-            scaled_image = pygame.transform.smoothscale(raw_image, size)
-            
-            # Cache the results
-            if album_name not in self.cover_art_cache:
-                self.cover_art_cache[album_name] = {}
-            self.cover_art_cache[album_name][size] = scaled_image
-            self.cover_art_cache[album_name]['raw'] = raw_image  # Store raw for reflection
-            
-            return scaled_image
-            
-        except Exception as e:
-            print(f"Error loading/creating art for {album_name}: {e}")
-            # Fallback placeholder surface on error
-            error_surface = pygame.Surface(size)
-            error_surface.fill((100, 0, 0))  # Red to indicate error
-            return error_surface
+            except Exception as e:
+                print(f"Error cargando imagen de {art_path}: {e}")
+                raw_image = None
+        # 3. Si no hay imagen, crear placeholder
+        if raw_image is None:
+            raw_image = pygame.Surface((200, 200), pygame.SRCALPHA)
+            raw_image.fill(self.config.NOW_PLAYING_ALBUM_ART_BG)
+            pygame.draw.rect(raw_image, self.config.ALBUM_ART_BORDER_COLOR, raw_image.get_rect(), 1)
+            placeholder_font = pygame.font.SysFont(None, 24)
+            art_text_surf = placeholder_font.render(album_name[:15], True, self.config.ALBUM_ART_BORDER_COLOR)
+            art_text_rect = art_text_surf.get_rect(center=(raw_image.get_width() // 2, raw_image.get_height() // 2))
+            raw_image.blit(art_text_surf, art_text_rect)
+        # Escalar
+        scaled_image = pygame.transform.smoothscale(raw_image, size)
+        # Cachear
+        if cache_key not in self.cover_art_cache:
+            self.cover_art_cache[cache_key] = {}
+        self.cover_art_cache[cache_key][size] = scaled_image
+        self.cover_art_cache[cache_key]['raw'] = raw_image
+        return scaled_image
 
     def draw_cover_flow(self, screen):
         """Draw iPod Classic 6th generation Cover Flow interface"""
@@ -152,7 +194,7 @@ class CoverFlow:
                 cover_x = center_x + (i * base_spacing) + animation_offset - cover_size[0] // 2
 
                 # Get album art
-                art_surface = self.get_album_art(album_name, album_data.get("art_path"), cover_size)
+                art_surface = self.get_album_art(album_name, album_data.get("art_path"), cover_size, album_data.get("song_path"))
                 
                 # Apply 3D perspective transformations
                 if not is_focused:
