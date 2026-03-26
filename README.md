@@ -40,13 +40,23 @@ A Python music player that emulates the classic iPod interface using Pygame, spe
 - **Low Power**: Optimized for Raspberry Pi Zero
 - **Framebuffer**: Direct screen output without X11
 
+
+## 🛠️ Technical Implementation for Raspberry Pi Zero
+
+To achieve a smooth 60fps-like experience on the Pi Zero's single-core ARMv6, this project implements:
+
+* **Direct Framebuffer Access:** Bypasses the overhead of a Desktop Environment (X11). It can run straight from the CLI.
+* **Efficient Database:** Uses SQLite for instant metadata retrieval, avoiding slow filesystem scans on SD cards during navigation.
+* **Threaded Playback:** Audio and Video decoding are decoupled from the UI rendering to prevent stuttering during menu animations.
+* **Custom Input Layer:** Maps GPIO or USB HID events to a virtual click-wheel logic, simulating the classic acceleration of the original hardware.
+  
 ## 📦 Installation
 
 ### Quick Install on Raspberry Pi
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/pygame-music-player.git
+git clone https://github.com/davidmonterocrespo24/ipod-pygame.git
 cd pygame-music-player
 
 # Run the automatic installer
@@ -70,7 +80,7 @@ sudo reboot
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/pygame-music-player.git
+   git clone https://github.com/davidmonterocrespo24/ipod-pygame.git
    cd pygame-music-player
    ```
 
